@@ -175,6 +175,12 @@ int main(int argc, char* argv[])
                 if (data != nullptr)
                 {
                     data->business->read_callback();
+                    //模拟高并发收数据
+                    //while (1);
+                    /*for (int i = 0; i < INT32_MAX; i++)
+                    {
+                        i * 33.33;
+                    }*/
                 }
             }, data);
 

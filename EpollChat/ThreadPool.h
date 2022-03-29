@@ -6,17 +6,19 @@
 #include <mutex>
 #include <condition_variable>
 #include <future>
+#include <unordered_map>
 
 class ThreadPool
 {
 private:
+    std::unordered_map<std::thread::id, bool> threadBusy;
     std::vector<std::thread> threads;
     std::queue<std::function<void()>> tasks;
     std::mutex tasks_mtx;
     std::condition_variable cv;
     bool stop;
 public:
-    ThreadPool(int size = std::max(std::thread::hardware_concurrency()*2, (uint)1));
+    ThreadPool(int size = std::thread::hardware_concurrency());
     ~ThreadPool();
 
     // void add(std::function<void()>);
@@ -43,9 +45,24 @@ auto ThreadPool::add(F&& f, Args&&... args) -> std::future<typename std::result_
         // don't allow enqueueing after stopping the pool
         if (stop)
             throw std::runtime_error("enqueue on stopped ThreadPool");
-
+        // 如果所有线程都忙则不放入任务队列，直接开一个线程来处理任务
+        bool allBusy = true;
+        for (auto& i : threadBusy) {
+            if (!i.second) {
+                allBusy = false;
+                break;
+            }
+        }
+        if (allBusy) {
+            printf("All threads busy. ");
+            std::thread([task]() {
+                [task]() { (*task)(); }();
+            }).detach();
+            return res;
+        }
         tasks.emplace([task]() { (*task)(); });
     }
     cv.notify_one();
+    
     return res;
 }

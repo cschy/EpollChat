@@ -3,6 +3,7 @@
 ThreadPool::ThreadPool(int size) : stop(false) {
     for (int i = 0; i < size; ++i) {
         threads.emplace_back(std::thread([this]() {
+            threadBusy[std::this_thread::get_id()] = false;
             while (true) {
                 std::function<void()> task;
                 {
@@ -14,9 +15,11 @@ ThreadPool::ThreadPool(int size) : stop(false) {
                     task = tasks.front();
                     tasks.pop();
                 }
+                threadBusy[std::this_thread::get_id()] = true;
                 task();
+                threadBusy[std::this_thread::get_id()] = false;
             }
-            }));
+        }));
     }
 }
 
@@ -30,4 +33,5 @@ ThreadPool::~ThreadPool() {
         if (th.joinable())
             th.join();
     }
+    threadBusy.clear();
 }
