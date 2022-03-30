@@ -46,7 +46,6 @@ std::vector<MyData*> Chat::read_parse(MyData* data)
 	{
 		for (auto& i : MyData2Name)
 		{
-			//if ((tmpName = i.second->business->getUserName()) != userName)
 			data->sendBuf += (i.second + '\n');
 		}
 		data->sendBuf[data->sendBuf.size() - 1] = '\0';
@@ -108,10 +107,10 @@ void Chat::read_callback(MyData* data)
 		return;
 	}
 	//如果明文传输被抓包了，黑客一直发送请求会导致缓冲区爆炸
-	std::vector<MyData*> mydata = read_parse(data);
+	std::vector<MyData*> datas = read_parse(data);
 	data->readBuf.clear();
 
-	for (auto& i : mydata)
+	for (auto& i : datas)
 	{
 		sendData(i);
 	}
