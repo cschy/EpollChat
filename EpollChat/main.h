@@ -5,10 +5,7 @@
 #include <arpa/inet.h>
 #include <string>
 #include <map>
-//#include "chat.h"
-//#include "business.h"
-//class Chat;
-//class Business;
+
 struct MyData //like channel?
 {
     int fd;
