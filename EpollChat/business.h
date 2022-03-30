@@ -4,13 +4,13 @@
 class Business
 {
 public:
-	Business(struct MyData* _data): data(_data) {}
 	virtual ~Business() {}
 	
 public:
-	virtual void accept_callback() = 0;
-	virtual void read_callback() = 0;
+	virtual void accept_callback(MyData* data) { printf("Business::accept_callback()\n"); };
+	virtual void read_callback(MyData* data) { printf("Business::read_callback()\n"); };
 
 protected:
-	struct MyData* data;
+	virtual void addMyData(MyData* data) { printf("Business::addMyData()\n"); };
+	virtual void deleteMyData(MyData* data) { printf("Business::deleteMyData()\n"); };
 };

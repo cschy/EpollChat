@@ -24,7 +24,6 @@
 
 int cur_fds = 1;
 int epoll_fd;
-std::map<int, MyData*> users;
 
 MyData* recvData(MyData* data)
 {
@@ -47,13 +46,10 @@ MyData* recvData(MyData* data)
         }
         else if (read_bytes == 0) {
             printf("[leave] %s:%d\n", inet_ntoa(data->userAddr.sin_addr), data->userAddr.sin_port);
-            
-            users.erase(data->fd);
             //epoll_ctl(epfd, EPOLL_CTL_DEL, data->fd, NULL);
             close(data->fd);
-            delete data;
             --cur_fds;
-            return nullptr;
+            break;
         }
     }
     return data;
@@ -98,11 +94,10 @@ void sendData(MyData* data)
 
 }
 
-
-int main(int argc, char* argv[])
-{    
+void startServer(Business* business)
+{
     int listen_fd;
-    
+
     struct sockaddr_in servaddr;
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
@@ -110,7 +105,7 @@ int main(int argc, char* argv[])
     servaddr.sin_port = htons(PORT);
 
     struct epoll_event ev, evs[MAXEPOLL];
-    
+
     do {
         struct rlimit rlt = { MAXEPOLL, MAXEPOLL };
         errif(setrlimit(RLIMIT_NOFILE, &rlt) == -1, "setrlimit error: ");
@@ -124,7 +119,7 @@ int main(int argc, char* argv[])
         ev.data.fd = listen_fd;
         errif(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1, "epoll_add listen_fd error: ");
     } while (0);
-    
+
 
     struct sockaddr_in cliaddr;
     socklen_t len = sizeof(struct sockaddr);
@@ -134,7 +129,7 @@ int main(int argc, char* argv[])
     while (true)
     {
         errif((wait_fds = epoll_wait(epoll_fd, evs, MAXEVENTS, -1)) == -1, "epoll_wait error: ");
-        
+
         for (i = 0; i < wait_fds; i++)
         {
             //accept
@@ -142,18 +137,15 @@ int main(int argc, char* argv[])
             {
                 ++cur_fds;
                 errif((conn_fd = accept(listen_fd, (struct sockaddr*)&cliaddr, &len)) == -1, "accept error: ");
-                printf("[connect] %s:%d]\n",  inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
+                printf("[connect] %s:%d]\n", inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
                 errif(fcntl(conn_fd, F_SETFL, fcntl(listen_fd, F_GETFD, 0) | O_NONBLOCK) == -1, "setnonblocking conn_fd error: ");
 
-                MyData* data = new MyData{ nullptr, conn_fd, cliaddr, "", "" };
-                data->business = new Chat(data);
-
+                MyData* data = new MyData{ conn_fd, cliaddr, "", "" };
+                business->accept_callback(data);
+                
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.ptr = (void*)data;
                 errif(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_fd, &ev) == -1, "epoll_add conn_fd error: ");
-
-                users[conn_fd] = data;
-                data->business->accept_callback();
 
                 continue;
             }
@@ -168,25 +160,27 @@ int main(int argc, char* argv[])
                 sendData(data);
                 //continue;
             }
-            
+
             //读数据
-            pool.add([](MyData* _data) {
-                MyData* data = recvData(_data);
-                if (data != nullptr)
+            pool.add([&]() {
+                business->read_callback(recvData(data));
+                //模拟高并发收数据
+                //while (1);
+                /*for (int i = 0; i < INT32_MAX; i++)
                 {
-                    data->business->read_callback();
-                    //模拟高并发收数据
-                    //while (1);
-                    /*for (int i = 0; i < INT32_MAX; i++)
-                    {
-                        i * 33.33;
-                    }*/
-                }
-            }, data);
+                    i * 33.33;
+                }*/
+                
+            });
 
         }
     }
 
     close(listen_fd);
+}
+
+int main(int argc, char* argv[])
+{    
+    startServer(new Chat);
     return 0;
 }

@@ -2,23 +2,18 @@
 #include "business.h"
 #include <vector>
 
-class Chat : protected Business
+class Chat : public Business
 {
 public:
-	Chat(MyData* _data = nullptr): Business(_data) {}
-	virtual ~Chat() {}
-
-	virtual void accept_callback();
-	virtual void read_callback();
-
-public:
-	const std::string& getUserName() const {
-		return userName;
-	}
+	virtual void accept_callback(MyData* data);
+	virtual void read_callback(MyData* data);
 
 protected:
-	std::vector<MyData*> read_parse();
+	virtual void addMyData(MyData* data) {
+		MyData2Name[data] = std::string(inet_ntoa(data->userAddr.sin_addr)) + ":" + std::to_string(data->userAddr.sin_port);
+	}
+	virtual void deleteMyData(MyData* data) { delete data; };
 
-private:
-	std::string userName;
+	std::vector<MyData*> read_parse(MyData* data);
+	static std::map<MyData*, std::string> MyData2Name;
 };

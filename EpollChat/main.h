@@ -5,20 +5,16 @@
 #include <arpa/inet.h>
 #include <string>
 #include <map>
-#include "chat.h"
-
-class Chat;
-struct MyData
+//#include "chat.h"
+//#include "business.h"
+//class Chat;
+//class Business;
+struct MyData //like channel?
 {
-    Chat* business;
     int fd;
     sockaddr_in userAddr;
     std::string readBuf;
     std::string sendBuf;
-    
-    ~MyData() {
-        delete business;
-    }
 };
 
 
